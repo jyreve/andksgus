@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>심사위원 실시간 투표 리모컨</title>
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --card-bg: #1e293b;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --agree-color: #2563eb;
+      --disagree-color: #e11d48;
+      --accent-gold: #fbbf24;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Pretendard', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+      color: var(--text-main);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: 18px;
+    }
+
+    header {
+      text-align: center;
+      padding: 12px 10px 18px;
+      border-bottom: 1px solid #334155;
+    }
+
+    .round-pill {
+      display: inline-block;
+      background: rgba(251, 191, 36, 0.18);
+      color: var(--accent-gold);
+      border: 1px solid rgba(251, 191, 36, 0.45);
+      padding: 5px 16px;
+      border-radius: 999px;
+      font-weight: 900;
+      font-size: 0.95rem;
+      margin-bottom: 10px;
+    }
+
+    .topic-title {
+      font-size: 1.35rem;
+      font-weight: 800;
+      line-height: 1.35;
+      color: #fff;
+      word-break: keep-all;
+    }
+
+    .guide-text {
+      text-align: center;
+      margin: 16px 0 12px;
+      color: #cbd5e1;
+      font-size: 0.98rem;
+      font-weight: 600;
+    }
+
+    .vote-buttons {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      justify-content: center;
+      margin: 6px 0 16px;
+    }
+
+    .vote-btn {
+      flex: 1;
+      min-height: 155px;
+      border-radius: 26px;
+      border: 3px solid transparent;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      padding: 20px;
+      position: relative;
+      color: #fff;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+    }
+
+    .vote-btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-agree {
+      background: linear-gradient(145deg, #1d4ed8, #2563eb);
+      border-color: #60a5fa;
+    }
+
+    .btn-disagree {
+      background: linear-gradient(145deg, #be123c, #e11d48);
+      border-color: #fb7185;
+    }
+
+    .vote-btn.selected {
+      border-color: var(--accent-gold);
+      box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.35), 0 12px 30px rgba(0, 0, 0, 0.5);
+      transform: translateY(-2px);
+    }
+
+    .vote-btn.dimmed {
+      opacity: 0.45;
+      filter: grayscale(35%);
+    }
+
+    .grade-tag {
+      background: rgba(15, 23, 42, 0.55);
+      padding: 6px 18px;
+      border-radius: 999px;
+      font-size: 1.1rem;
+      font-weight: 900;
+      margin-bottom: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .side-main-title {
+      font-size: 2.2rem;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+    }
+
+    .side-sub-desc {
+      font-size: 0.95rem;
+      margin-top: 6px;
+      opacity: 0.9;
+      font-weight: 600;
+    }
+
+    .check-badge {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      background: var(--accent-gold);
+      color: #0f172a;
+      font-weight: 900;
+      font-size: 0.85rem;
+      padding: 4px 12px;
+      border-radius: 999px;
+      display: none;
+    }
+
+    .vote-btn.selected .check-badge {
+      display: inline-block;
+    }
+
+    .status-box {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 18px;
+      padding: 16px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 1rem;
+      color: #e2e8f0;
+    }
+
+    .status-box.voted {
+      border-color: #10b981;
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .status-box.closed {
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+      background: rgba(251, 191, 36, 0.1);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="round-pill" id="roundBadge">ROUND 1 / 4</div>
+    <div class="topic-title" id="topicTitle">토론 주제를 불러오는 중...</div>
+  </header>
+
+  <div class="guide-text" id="guideText">
+    더 설득력 있었던 진영(학년)을 선택해 주세요!
+  </div>
+
+  <div class="vote-buttons">
+    <!-- 찬성 투표 버튼 -->
+    <button class="vote-btn btn-agree" id="btnVoteAgree" onclick="submitVote('agree')">
+      <span class="check-badge">✔ 내 선택</span>
+      <span class="grade-tag" id="agreeGradeTag">🌱 2학년 팀</span>
+      <span class="side-main-title" id="agreeMainTitle">⭕ 찬성 측</span>
+      <span class="side-sub-desc">이 주장이 더 설득력 있어요!</span>
+    </button>
+
+    <!-- 반대 투표 버튼 -->
+    <button class="vote-btn btn-disagree" id="btnVoteDisagree" onclick="submitVote('disagree')">
+      <span class="check-badge">✔ 내 선택</span>
+      <span class="grade-tag" id="disagreeGradeTag">🔥 3학년 팀</span>
+      <span class="side-main-title" id="disagreeMainTitle">❌ 반대 측</span>
+      <span class="side-sub-desc">이 주장이 더 설득력 있어요!</span>
+    </button>
+  </div>
+
+  <div class="status-box" id="statusBox">
+    위 버튼 중 하나를 터치하면 투표가 완료됩니다.
+  </div>
+
+  <script>
+    // 심사위원 기기 고유 ID 생성/유지 (새로고침해도 내 투표 유지)
+    let voterId = localStorage.getItem('debate_voter_id');
+    if (!voterId) {
+      voterId = 'v_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+      localStorage.setItem('debate_voter_id', voterId);
+    }
+
+    let currentRound = 1;
+    let myVotes = { 1: null, 2: null, 3: null, 4: null };
+    let latestState = null;
+
+    async function fetchInitialMyState() {
+      try {
+        const res = await fetch(`/api/state?voterId=${encodeURIComponent(voterId)}`);
+        const data = await res.json();
+        if (data.myVotes) {
+          myVotes = data.myVotes;
+        }
+        renderVoterUI(data);
+      } catch (e) {}
+    }
+
+    async function submitVote(choice) {
+      if (!latestState) return;
+      const rd = latestState.rounds[latestState.currentRound];
+      if (rd.status === 'revealed') {
+        alert('이미 이번 라운드 결과가 공개되어 투표가 마감되었습니다!');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/vote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            voterId,
+            choice,
+            round: latestState.currentRound
+          })
+        });
+        const result = await res.json();
+        if (result.ok) {
+          myVotes[result.round] = choice;
+          if (navigator.vibrate) navigator.vibrate(40);
+          renderVoterUI(latestState);
+        } else if (result.message) {
+          alert(result.message);
+        }
+      } catch (e) {
+        alert('네트워크 연결을 확인해주세요.');
+      }
+    }
+
+    function renderVoterUI(state) {
+      latestState = state;
+      const cur = state.currentRound;
+      const rd = state.rounds[cur];
+
+      // 만약 라운드가 리셋되어 총 투표수가 0이 되었다면 내 로컬 선택 표시도 초기화
+      if (rd.totalCount === 0 && myVotes[cur]) {
+        myVotes[cur] = null;
+      }
+
+      document.getElementById('roundBadge').textContent = `ROUND ${cur} / 4`;
+      document.getElementById('topicTitle').textContent = rd.topic;
+
+      const agreeGradeText = rd.agreeTeam === 'grade2' ? '🌱 2학년 팀' : '🔥 3학년 팀';
+      const disagreeGradeText = rd.disagreeTeam === 'grade2' ? '🌱 2학년 팀' : '🔥 3학년 팀';
+
+      document.getElementById('agreeGradeTag').textContent = agreeGradeText;
+      document.getElementById('disagreeGradeTag').textContent = disagreeGradeText;
+      document.getElementById('agreeMainTitle').textContent = `⭕ ${rd.agreeLabel || '찬성 측'}`;
+      document.getElementById('disagreeMainTitle').textContent = `❌ ${rd.disagreeLabel || '반대 측'}`;
+
+      const myChoice = myVotes[cur];
+      const btnAgree = document.getElementById('btnVoteAgree');
+      const btnDisagree = document.getElementById('btnVoteDisagree');
+      const statusBox = document.getElementById('statusBox');
+
+      btnAgree.className = 'vote-btn btn-agree';
+      btnDisagree.className = 'vote-btn btn-disagree';
+
+      if (myChoice === 'agree') {
+        btnAgree.classList.add('selected');
+        btnDisagree.classList.add('dimmed');
+      } else if (myChoice === 'disagree') {
+        btnDisagree.classList.add('selected');
+        btnAgree.classList.add('dimmed');
+      }
+
+      if (rd.status === 'revealed') {
+        statusBox.className = 'status-box closed';
+        statusBox.textContent = '🎉 투표 마감! 앞쪽 교사용 화면에서 결과를 확인하세요!';
+      } else if (myChoice) {
+        const chosenText = myChoice === 'agree'
+          ? `⭕ 찬성 (${rd.agreeTeam === 'grade2' ? '2학년' : '3학년'})`
+          : `❌ 반대 (${rd.disagreeTeam === 'grade2' ? '2학년' : '3학년'})`;
+        statusBox.className = 'status-box voted';
+        statusBox.textContent = `✅ [${chosenText}] 투표 완료! (마감 전까지 변경 가능)`;
+      } else {
+        statusBox.className = 'status-box';
+        statusBox.textContent = '위 버튼 중 하나를 터치하면 즉시 투표가 반영됩니다.';
+      }
+    }
+
+    function connectSSE() {
+      const es = new EventSource('/api/events');
+      es.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        renderVoterUI(data);
+      };
+      es.onerror = () => {
+        setTimeout(connectSSE, 2000);
+      };
+    }
+
+    fetchInitialMyState();
+    connectSSE();
+  </script>
+</body>
+</html>
